@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Metrics Calculator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Chart.js for charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- jsPDF AutoTable for table generation in PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            color: #334155;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to top for better scrolling */
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .form-section {
+            display: none; /* Hidden by default */
+        }
+        .form-section.active {
+            display: block;
+        }
+        .input-group label {
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .input-group input[type="number"],
+        .input-group select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 1rem;
+            color: #334155;
+            transition: border-color 0.2s ease-in-out;
+        }
+        .input-group input[type="number"]:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+            transform: translateY(-1px);
+        }
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        .btn-secondary {
+            background-color: #e2e8f0;
+            color: #475569;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+        }
+        .btn-secondary:hover {
+            background-color: #cbd5e1;
+            transform: translateY(-1px);
+        }
+        .btn-secondary:active {
+            transform: translateY(0);
+        }
+        .unit-toggle-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            background-color: #e2e8f0;
+            border-radius: 8px;
+            padding: 4px;
+        }
+        .unit-toggle-btn {
+            flex: 1;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+        }
+        .unit-toggle-btn.active {
+            background-color: #3b82f6;
+            color: white;
+            box-shadow: 0 2px 5px rgba(59, 130, 246, 0.2);
+        }
+        .result-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        .result-box h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 10px;
+        }
+        .result-box p {
+            font-size: 1.1rem;
+            color: #475569;
+            line-height: 1.6;
+        }
+        .bmi-scale-bar {
+            height: 20px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 10px;
+            display: flex;
+        }
+        .bmi-scale-segment {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            position: relative;
+        }
+        .bmi-scale-segment.underweight { background-color: #3b82f6; width: 18.5%; } /* Blue */
+        .bmi-scale-segment.normal { background-color: #22c55e; width: 6.5%; } /* Green */
+        .bmi-scale-segment.overweight { background-color: #f59e0b; width: 5%; } /* Orange */
+        .bmi-scale-segment.obese-i { background-color: #ef4444; width: 5%; } /* Red */
+        .bmi-scale-segment.obese-ii { background-color: #dc2626; width: 5%; } /* Darker Red */
+        .bmi-scale-segment.obese-iii { background-color: #b91c1c; width: 55%; } /* Even Darker Red, placeholder for >35 */
+
+        .bmi-marker {
+            position: absolute;
+            top: -5px;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 30px;
+            background-color: #1e293b;
+            z-index: 10;
+        }
+        .bmi-marker::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 5px solid #1e293b;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none; /* Hidden by default */
+        }
+        .spinner {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #3b82f6;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .chart-container {
+            position: relative;
+            height: 300px; /* Fixed height for charts */
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            .input-group {
+                margin-bottom: 15px;
+            }
+            .btn-primary, .btn-secondary {
+                padding: 10px 20px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Health Metrics Calculator</h1>
+
+        <!-- Unit Selection Toggle -->
+        <div class="unit-toggle-container">
+            <button id="metricBtn" class="unit-toggle-btn active">Metric (kg, cm)</button>
+            <button id="imperialBtn" class="unit-toggle-btn">Imperial (lbs, in)</button>
+        </div>
+
+        <!-- Step 1: Basic Information -->
+        <div id="step1" class="form-section active">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Step 1: Basic Information</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="input-group">
+                    <label for="gender">Gender:</label>
+                    <select id="gender" class="mt-1 block w-full">
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="age">Age (years):</label>
+                    <input type="number" id="age" placeholder="e.g., 30" min="1" class="mt-1 block w-full rounded-md">
+                </div>
+                <div class="input-group">
+                    <label for="height">Height (<span id="heightUnit">cm</span>):</label>
+                    <input type="number" id="height" placeholder="e.g., 175" min="1" class="mt-1 block w-full rounded-md">
+                </div>
+                <div class="input-group">
+                    <label for="weight">Weight (<span id="weightUnit">kg</span>):</label>
+                    <input type="number" id="weight" placeholder="e.g., 70" min="1" class="mt-1 block w-full rounded-md">
+                </div>
+                <div class="input-group">
+                    <label for="activityLevel">Activity Level:</label>
+                    <select id="activityLevel" class="mt-1 block w-full">
+                        <option value="sedentary">Sedentary (little or no exercise)</option>
+                        <option value="lightly-active">Lightly active (light exercise/sports 1-3 days/week)</option>
+                        <option value="moderately-active">Moderately active (moderate exercise/sports 3-5 days/week)</option>
+                        <option value="very-active">Very active (hard exercise/sports 6-7 days/week)</option>
+                        <option value="extra-active">Extra active (very hard exercise/physical job)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-end mt-6">
+                <button id="next1Btn" class="btn-primary">Next <i class="fas fa-arrow-right ml-2"></i></button>
+            </div>
+        </div>
+
+        <!-- Step 2: Body Measurements for Body Fat -->
+        <div id="step2" class="form-section">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Step 2: Body Measurements (for Body Fat)</h2>
+            <p class="text-gray-600 mb-4">Enter these measurements for more accurate body fat percentage calculation (Navy Method). Jackson-Pollock method requires specific skinfold measurements which are not included in this general calculator.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="input-group">
+                    <label for="neck">Neck Circumference (<span id="neckUnit">cm</span>):</label>
+                    <input type="number" id="neck" placeholder="e.g., 38" min="1" class="mt-1 block w-full rounded-md">
+                </div>
+                <div class="input-group">
+                    <label for="waist">Waist Circumference (<span id="waistUnit">cm</span>):</label>
+                    <input type="number" id="waist" placeholder="e.g., 85" min="1" class="mt-1 block w-full rounded-md">
+                </div>
+                <div class="input-group" id="hipGroup">
+                    <label for="hip">Hip Circumference (<span id="hipUnit">cm</span>):</label>
+                    <input type="number" id="hip" placeholder="e.g., 95" min="1" class="mt-1 block w-full rounded-md">
+                </div>
+            </div>
+            <div class="flex justify-between mt-6">
+                <button id="prev2Btn" class="btn-secondary"><i class="fas fa-arrow-left mr-2"></i> Previous</button>
+                <button id="calculateBtn" class="btn-primary">Calculate Metrics <i class="fas fa-calculator ml-2"></i></button>
+            </div>
+        </div>
+
+        <!-- Step 3: Results and Recommendations -->
+        <div id="step3" class="form-section">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Step 3: Your Health Metrics</h2>
+
+            <!-- BMI Result -->
+            <div class="result-box">
+                <h3>Body Mass Index (BMI)</h3>
+                <p>Your BMI: <span id="bmiResult" class="font-bold text-blue-600">--</span></p>
+                <p>Classification: <span id="bmiClassification" class="font-bold">--</span></p>
+                <div class="bmi-scale-bar relative">
+                    <div class="bmi-scale-segment underweight" style="width: 18.5%;"></div> <!-- <18.5 -->
+                    <div class="bmi-scale-segment normal" style="width: 6.5%;"></div> <!-- 18.5-24.9 -->
+                    <div class="bmi-scale-segment overweight" style="width: 5%;"></div> <!-- 25-29.9 -->
+                    <div class="bmi-scale-segment obese-i" style="width: 5%;"></div> <!-- 30-34.9 -->
+                    <div class="bmi-scale-segment obese-ii" style="width: 5%;"></div> <!-- 35-39.9 -->
+                    <div class="bmi-scale-segment obese-iii" style="width: 55%;"></div> <!-- >=40 -->
+                    <div id="bmiMarker" class="bmi-marker" style="left: 0%;"></div>
+                </div>
+                <div class="flex justify-between text-xs text-gray-500 mt-2">
+                    <span>&lt;18.5</span>
+                    <span>18.5</span>
+                    <span>25</span>
+                    <span>30</span>
+                    <span>35</span>
+                    <span>40+</span>
+                </div>
+                <p class="mt-2 text-sm text-gray-600">Health Risk: <span id="bmiRisk" class="font-bold">--</span></p>
+            </div>
+
+            <!-- Body Fat Percentage Result -->
+            <div class="result-box">
+                <h3>Body Fat Percentage (BFP)</h3>
+                <p>Navy Method: <span id="bfpNavyResult" class="font-bold text-blue-600">--</span></p>
+                <p>BIA Simulation: <span id="bfpBIAResult" class="font-bold text-blue-600">--</span></p>
+                <p class="text-sm text-gray-600 mt-2">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    The Jackson-Pollock method requires specific skinfold measurements (e.g., triceps, subscapular) which are not collected in this general calculator.
+                    BIA simulation provides an estimate and can vary based on hydration and other factors.
+                </p>
+            </div>
+
+            <!-- Ideal Weight Result -->
+            <div class="result-box">
+                <h3>Ideal Weight Range</h3>
+                <p>Hamwi Formula: <span id="idealWeightHamwi" class="font-bold text-blue-600">--</span></p>
+                <p>Devine Formula: <span id="idealWeightDevine" class="font-bold text-blue-600">--</span></p>
+                <p>Robinson Formula: <span id="idealWeightRobinson" class="font-bold text-blue-600">--</span></p>
+                <p>Miller Formula: <span id="idealWeightMiller" class="font-bold text-blue-600">--</span></p>
+            </div>
+
+            <!-- Calorie Needs Result -->
+            <div class="result-box">
+                <h3>Estimated Calorie Needs</h3>
+                <p>Basal Metabolic Rate (BMR):</p>
+                <ul class="list-disc list-inside ml-4 text-gray-700">
+                    <li>Harris-Benedict: <span id="bmrHarris" class="font-bold text-blue-600">--</span> calories/day</li>
+                    <li>Mifflin-St Jeor: <span id="bmrMifflin" class="font-bold text-blue-600">--</span> calories/day</li>
+                    <li>Katch-McArdle: <span id="bmrKatch" class="font-bold text-blue-600">--</span> calories/day <span class="text-sm text-gray-500">(Requires Lean Body Mass)</span></li>
+                </ul>
+                <p class="mt-2">Total Daily Energy Expenditure (TDEE): <span id="tdeeResult" class="font-bold text-blue-600">--</span> calories/day</p>
+            </div>
+
+            <!-- Personalized Recommendations -->
+            <div class="result-box bg-blue-50 border-blue-200">
+                <h3>Personalized Health Recommendations</h3>
+                <p id="recommendations" class="text-blue-800">--</p>
+            </div>
+
+            <div class="flex justify-between mt-6">
+                <button id="prev3Btn" class="btn-secondary"><i class="fas fa-arrow-left mr-2"></i> Previous</button>
+                <button id="viewHistoryBtn" class="btn-primary">View History & Charts <i class="fas fa-chart-line ml-2"></i></button>
+            </div>
+        </div>
+
+        <!-- Step 4: History and Charts -->
+        <div id="step4" class="form-section">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Step 4: Progress History & Charts</h2>
+            <div id="historyTableContainer" class="mb-6 overflow-x-auto">
+                <h3 class="text-xl font-semibold text-gray-700 mb-3">Measurement History</h3>
+                <table class="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm">
+                    <thead>
+                        <tr class="bg-gray-100 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">
+                            <th class="py-3 px-4 border-b">Date</th>
+                            <th class="py-3 px-4 border-b">Weight</th>
+                            <th class="py-3 px-4 border-b">BMI</th>
+                            <th class="py-3 px-4 border-b">BFP (Navy)</th>
+                            <th class="py-3 px-4 border-b">TDEE</th>
+                            <th class="py-3 px-4 border-b">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody" class="divide-y divide-gray-200">
+                        <!-- History rows will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+                <p id="noHistoryMessage" class="text-center text-gray-500 mt-4 hidden">No history found. Calculate your metrics to save your first entry!</p>
+            </div>
+
+            <h3 class="text-xl font-semibold text-gray-700 mb-3">Progress Charts</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="chart-container bg-white p-4 rounded-lg shadow">
+                    <canvas id="weightChart"></canvas>
+                </div>
+                <div class="chart-container bg-white p-4 rounded-lg shadow">
+                    <canvas id="bmiChart"></canvas>
+                </div>
+                <div class="chart-container bg-white p-4 rounded-lg shadow">
+                    <canvas id="bfpChart"></canvas>
+                </div>
+                <div class="chart-container bg-white p-4 rounded-lg shadow">
+                    <canvas id="tdeeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="flex justify-between mt-6">
+                <button id="prev4Btn" class="btn-secondary"><i class="fas fa-arrow-left mr-2"></i> Back to Results</button>
+                <button id="exportPdfBtn" class="btn-primary"><i class="fas fa-file-pdf mr-2"></i> Export PDF Report</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Firebase imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase variables (provided by Canvas environment)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let app;
+        let db;
+        let auth;
+        let userId = null;
+        let unsubscribeSnapshot = null; // To store the unsubscribe function for Firestore listener
+
+        // Initialize Firebase and authenticate
+        async function initializeFirebase() {
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Sign in with custom token if available, otherwise anonymously
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // Listen for auth state changes to get the user ID
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        console.log("Firebase initialized. User ID:", userId);
+                        // Once authenticated, load history
+                        loadHistory();
+                    } else {
+                        // If user logs out or token expires, sign in anonymously
+                        signInAnonymously(auth).then(anonUser => {
+                            userId = anonUser.user.uid;
+                            console.log("Signed in anonymously. User ID:", userId);
+                            loadHistory();
+                        }).catch(error => {
+                            console.error("Error signing in anonymously:", error);
+                        });
+                    }
+                });
+            } catch (error) {
+                console.error("Error initializing Firebase:", error);
+                // Display a user-friendly message if Firebase fails to initialize
+                showMessage("Error: Could not connect to the database. Please try again later.", "error");
+            }
+        }
+
+        // Call Firebase initialization on window load
+        window.onload = initializeFirebase;
+
+        // --- Global State and UI Elements ---
+        let currentStep = 1;
+        let isMetric = true; // true for metric, false for imperial
+
+        const steps = {
+            1: document.getElementById('step1'),
+            2: document.getElementById('step2'),
+            3: document.getElementById('step3'),
+            4: document.getElementById('step4')
+        };
+
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const metricBtn = document.getElementById('metricBtn');
+        const imperialBtn = document.getElementById('imperialBtn');
+
+        // Input fields
+        const genderInput = document.getElementById('gender');
+        const ageInput = document.getElementById('age');
+        const heightInput = document.getElementById('height');
+        const weightInput = document.getElementById('weight');
+        const activityLevelInput = document.getElementById('activityLevel');
+        const neckInput = document.getElementById('neck');
+        const waistInput = document.getElementById('waist');
+        const hipInput = document.getElementById('hip');
+        const hipGroup = document.getElementById('hipGroup'); // For conditional display
+
+        // Unit display spans
+        const heightUnitSpan = document.getElementById('heightUnit');
+        const weightUnitSpan = document.getElementById('weightUnit');
+        const neckUnitSpan = document.getElementById('neckUnit');
+        const waistUnitSpan = document.getElementById('waistUnit');
+        const hipUnitSpan = document.getElementById('hipUnit');
+
+        // Result display spans
+        const bmiResultSpan = document.getElementById('bmiResult');
+        const bmiClassificationSpan = document.getElementById('bmiClassification');
+        const bmiMarker = document.getElementById('bmiMarker');
+        const bmiRiskSpan = document.getElementById('bmiRisk');
+        const bfpNavyResultSpan = document.getElementById('bfpNavyResult');
+        const bfpBIAResultSpan = document.getElementById('bfpBIAResult');
+        const idealWeightHamwiSpan = document.getElementById('idealWeightHamwi');
+        const idealWeightDevineSpan = document.getElementById('idealWeightDevine');
+        const idealWeightRobinsonSpan = document.getElementById('idealWeightRobinson');
+        const idealWeightMillerSpan = document.getElementById('idealWeightMiller');
+        const bmrHarrisSpan = document.getElementById('bmrHarris');
+        const bmrMifflinSpan = document.getElementById('bmrMifflin');
+        const bmrKatchSpan = document.getElementById('bmrKatch');
+        const tdeeResultSpan = document.getElementById('tdeeResult');
+        const recommendationsSpan = document.getElementById('recommendations');
+
+        // History and Chart elements
+        const historyTableBody = document.getElementById('historyTableBody');
+        const noHistoryMessage = document.getElementById('noHistoryMessage');
+        let weightChart, bmiChart, bfpChart, tdeeChart;
+
+        // --- Navigation Functions ---
+        function showStep(stepNum) {
+            Object.values(steps).forEach(step => step.classList.remove('active'));
+            steps[stepNum].classList.add('active');
+            currentStep = stepNum;
+            window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to top on step change
+        }
+
+        // --- Unit Conversion Logic ---
+        function updateUnitLabels() {
+            if (isMetric) {
+                heightUnitSpan.textContent = 'cm';
+                weightUnitSpan.textContent = 'kg';
+                neckUnitSpan.textContent = 'cm';
+                waistUnitSpan.textContent = 'cm';
+                hipUnitSpan.textContent = 'cm';
+            } else {
+                heightUnitSpan.textContent = 'inches';
+                weightUnitSpan.textContent = 'lbs';
+                neckUnitSpan.textContent = 'inches';
+                waistUnitSpan.textContent = 'inches';
+                hipUnitSpan.textContent = 'inches';
+            }
+        }
+
+        function convertInputs(toMetric) {
+            const height = parseFloat(heightInput.value);
+            const weight = parseFloat(weightInput.value);
+            const neck = parseFloat(neckInput.value);
+            const waist = parseFloat(waistInput.value);
+            const hip = parseFloat(hipInput.value);
+
+            if (toMetric && !isMetric) { // Convert imperial to metric
+                if (!isNaN(height)) heightInput.value = (height * 2.54).toFixed(1);
+                if (!isNaN(weight)) weightInput.value = (weight * 0.453592).toFixed(1);
+                if (!isNaN(neck)) neckInput.value = (neck * 2.54).toFixed(1);
+                if (!isNaN(waist)) waistInput.value = (waist * 2.54).toFixed(1);
+                if (!isNaN(hip)) hipInput.value = (hip * 2.54).toFixed(1);
+            } else if (!toMetric && isMetric) { // Convert metric to imperial
+                if (!isNaN(height)) heightInput.value = (height / 2.54).toFixed(1);
+                if (!isNaN(weight)) weightInput.value = (weight / 0.453592).toFixed(1);
+                if (!isNaN(neck)) neckInput.value = (neck / 2.54).toFixed(1);
+                if (!isNaN(waist)) waistInput.value = (waist / 2.54).toFixed(1);
+                if (!isNaN(hip)) hipInput.value = (hip / 2.54).toFixed(1);
+            }
+            isMetric = toMetric;
+            updateUnitLabels();
+        }
+
+        metricBtn.addEventListener('click', () => {
+            if (!isMetric) {
+                metricBtn.classList.add('active');
+                imperialBtn.classList.remove('active');
+                convertInputs(true);
+            }
+        });
+
+        imperialBtn.addEventListener('click', () => {
+            if (isMetric) {
+                imperialBtn.classList.add('active');
+                metricBtn.classList.remove('active');
+                convertInputs(false);
+            }
+        });
+
+        // Toggle hip input visibility based on gender
+        genderInput.addEventListener('change', () => {
+            if (genderInput.value === 'female') {
+                hipGroup.style.display = 'block';
+            } else {
+                hipGroup.style.display = 'none';
+                hipInput.value = ''; // Clear hip value if gender changes to male
+            }
+        });
+
+        // Initial call to set unit labels and hip visibility
+        updateUnitLabels();
+        genderInput.dispatchEvent(new Event('change')); // Trigger initial hip group visibility
+
+        // --- Input Validation ---
+        function validateStep1() {
+            const age = parseFloat(ageInput.value);
+            const height = parseFloat(heightInput.value);
+            const weight = parseFloat(weightInput.value);
+
+            if (isNaN(age) || age <= 0 || isNaN(height) || height <= 0 || isNaN(weight) || weight <= 0) {
+                showMessage("Please enter valid positive numbers for Age, Height, and Weight.", "error");
+                return false;
+            }
+            return true;
+        }
+
+        function validateStep2() {
+            const neck = parseFloat(neckInput.value);
+            const waist = parseFloat(waistInput.value);
+            const gender = genderInput.value;
+            const hip = parseFloat(hipInput.value);
+
+            if (isNaN(neck) || neck <= 0 || isNaN(waist) || waist <= 0) {
+                showMessage("Please enter valid positive numbers for Neck and Waist circumference.", "error");
+                return false;
+            }
+            if (gender === 'female' && (isNaN(hip) || hip <= 0)) {
+                showMessage("Please enter a valid positive number for Hip circumference for females.", "error");
+                return false;
+            }
+            return true;
+        }
+
+        // --- Core Calculation Functions ---
+
+        /**
+         * Calculates Body Mass Index (BMI).
+         * @param {number} weight - Weight in kg.
+         * @param {number} height - Height in cm.
+         * @returns {number} BMI value.
+         */
+        function calculateBMI(weight, height) {
+            const heightMeters = height / 100; // Convert cm to meters
+            return (weight / (heightMeters * heightMeters)).toFixed(2);
+        }
+
+        /**
+         * Classifies BMI and provides health risk.
+         * @param {number} bmi - BMI value.
+         * @returns {{classification: string, risk: string, color: string}} BMI classification, risk, and associated color.
+         */
+        function getBMIClassification(bmi) {
+            let classification, risk, color;
+            if (bmi < 18.5) {
+                classification = "Underweight";
+                risk = "Potentially increased risk of other health problems.";
+                color = "text-blue-600";
+            } else if (bmi >= 18.5 && bmi <= 24.9) {
+                classification = "Normal weight";
+                risk = "Lowest risk of health problems.";
+                color = "text-green-600";
+            } else if (bmi >= 25 && bmi <= 29.9) {
+                classification = "Overweight";
+                risk = "Increased risk of health problems like heart disease and type 2 diabetes.";
+                color = "text-yellow-600";
+            } else if (bmi >= 30 && bmi <= 34.9) {
+                classification = "Obese (Class I)";
+                risk = "High risk of health problems, including severe chronic diseases.";
+                color = "text-red-600";
+            } else if (bmi >= 35 && bmi <= 39.9) {
+                classification = "Obese (Class II)";
+                risk = "Very high risk of severe health problems.";
+                color = "text-red-700";
+            } else { // bmi >= 40
+                classification = "Obese (Class III)";
+                risk = "Extremely high risk of life-threatening health problems.";
+                color = "text-red-800";
+            }
+            return { classification, risk, color };
+        }
+
+        /**
+         * Calculates Body Fat Percentage using the US Navy Method.
+         * @param {string} gender - 'male' or 'female'.
+         * @param {number} heightCm - Height in cm.
+         * @param {number} neckCm - Neck circumference in cm.
+         * @param {number} waistCm - Waist circumference in cm.
+         * @param {number} hipCm - Hip circumference in cm (for females).
+         * @returns {number} Body Fat Percentage.
+         */
+        function calculateBFP_Navy(gender, heightCm, neckCm, waistCm, hipCm) {
+            let bfp;
+            if (gender === 'male') {
+                // Formula: 495 / (1.0324 - 0.19077 * log10(waist - neck) + 0.15456 * log10(height)) - 450
+                // Using natural log and converting to log10: log10(x) = ln(x) / ln(10)
+                const logHeight = Math.log(heightCm) / Math.LN10;
+                const logWaistNeck = Math.log(waistCm - neckCm) / Math.LN10;
+                bfp = 495 / (1.0324 - 0.19077 * logWaistNeck + 0.15456 * logHeight) - 450;
+            } else { // female
+                // Formula: 495 / (1.29579 - 0.35004 * log10(waist + hip - neck) + 0.22100 * log10(height)) - 450
+                const logHeight = Math.log(heightCm) / Math.LN10;
+                const logWaistHipNeck = Math.log(waistCm + hipCm - neckCm) / Math.LN10;
+                bfp = 495 / (1.29579 - 0.35004 * logWaistHipNeck + 0.22100 * logHeight) - 450;
+            }
+            return bfp > 0 ? bfp.toFixed(2) : 'N/A'; // Ensure BFP is positive
+        }
+
+        /**
+         * Simulates Body Impedance Analysis (BIA) for Body Fat Percentage.
+         * This is a simplified estimation and not a true BIA measurement.
+         * Formula derived from general estimations based on BMI, age, and gender.
+         * @param {string} gender - 'male' or 'female'.
+         * @param {number} age - Age in years.
+         * @param {number} bmi - BMI value.
+         * @returns {number} Estimated Body Fat Percentage.
+         */
+        function calculateBFP_BIA_Simulation(gender, age, bmi) {
+            let bfp;
+            if (gender === 'male') {
+                bfp = (1.20 * bmi) + (0.23 * age) - (10.8 * 1) - 5.4;
+            } else { // female
+                bfp = (1.20 * bmi) + (0.23 * age) - (10.8 * 0) - 5.4;
+            }
+            return bfp > 0 ? bfp.toFixed(2) : 'N/A'; // Ensure BFP is positive
+        }
+
+        /**
+         * Calculates Ideal Body Weight using various formulas.
+         * @param {string} gender - 'male' or 'female'.
+         * @param {number} heightCm - Height in cm.
+         * @returns {Object} Object with ideal weight ranges for each formula in kg.
+         */
+        function calculateIdealWeight(gender, heightCm) {
+            const heightInches = heightCm / 2.54; // Convert cm to inches
+
+            let hamwi, devine, robinson, miller;
+
+            if (gender === 'male') {
+                hamwi = (48 + 2.7 * (heightInches - 60)).toFixed(1);
+                devine = (50 + 2.3 * (heightInches - 60)).toFixed(1);
+                robinson = (52 + 1.9 * (heightInches - 60)).toFixed(1);
+                miller = (56.2 + 1.41 * (heightInches - 60)).toFixed(1);
+            } else { // female
+                hamwi = (45.5 + 2.2 * (heightInches - 60)).toFixed(1);
+                devine = (45.5 + 2.3 * (heightInches - 60)).toFixed(1);
+                robinson = (49 + 1.7 * (heightInches - 60)).toFixed(1);
+                miller = (53.1 + 1.36 * (heightInches - 60)).toFixed(1);
+            }
+            return { hamwi, devine, robinson, miller };
+        }
+
+        /**
+         * Calculates Basal Metabolic Rate (BMR) using Harris-Benedict, Mifflin-St Jeor, and Katch-McArdle.
+         * @param {string} gender - 'male' or 'female'.
+         * @param {number} weightKg - Weight in kg.
+         * @param {number} heightCm - Height in cm.
+         * @param {number} age - Age in years.
+         * @param {number} bfpNavy - Body Fat Percentage (Navy Method) for Katch-McArdle.
+         * @returns {Object} Object with BMR values for each formula.
+         */
+        function calculateBMR(gender, weightKg, heightCm, age, bfpNavy) {
+            let bmrHarris, bmrMifflin, bmrKatch;
+
+            // Harris-Benedict Equation
+            if (gender === 'male') {
+                bmrHarris = (66.5 + (13.75 * weightKg) + (5.003 * heightCm) - (6.755 * age)).toFixed(0);
+            } else { // female
+                bmrHarris = (655.1 + (9.563 * weightKg) + (1.850 * heightCm) - (4.676 * age)).toFixed(0);
+            }
+
+            // Mifflin-St Jeor Equation
+            if (gender === 'male') {
+                bmrMifflin = ((10 * weightKg) + (6.25 * heightCm) - (5 * age) + 5).toFixed(0);
+            } else { // female
+                bmrMifflin = ((10 * weightKg) + (6.25 * heightCm) - (5 * age) - 161).toFixed(0);
+            }
+
+            // Katch-McArdle Equation (requires Lean Body Mass)
+            // LBM = weight - (weight * BFP / 100)
+            if (!isNaN(bfpNavy) && bfpNavy !== 'N/A') {
+                const leanBodyMassKg = weightKg - (weightKg * (parseFloat(bfpNavy) / 100));
+                bmrKatch = (370 + (21.6 * leanBodyMassKg)).toFixed(0);
+            } else {
+                bmrKatch = 'N/A';
+            }
+
+            return { bmrHarris, bmrMifflin, bmrKatch };
+        }
+
+        /**
+         * Calculates Total Daily Energy Expenditure (TDEE).
+         * @param {number} bmr - Basal Metabolic Rate (using Mifflin-St Jeor as a common average).
+         * @param {string} activityLevel - User's activity level.
+         * @returns {number} TDEE value.
+         */
+        function calculateTDEE(bmr, activityLevel) {
+            let activityFactor;
+            switch (activityLevel) {
+                case 'sedentary':
+                    activityFactor = 1.2;
+                    break;
+                case 'lightly-active':
+                    activityFactor = 1.375;
+                    break;
+                case 'moderately-active':
+                    activityFactor = 1.55;
+                    break;
+                case 'very-active':
+                    activityFactor = 1.725;
+                    break;
+                case 'extra-active':
+                    activityFactor = 1.9;
+                    break;
+                default:
+                    activityFactor = 1.2; // Default to sedentary
+            }
+            return (bmr * activityFactor).toFixed(0);
+        }
+
+        /**
+         * Generates personalized health recommendations.
+         * @param {string} bmiClassification - BMI classification.
+         * @param {number} bmi - BMI value.
+         * @param {number} bfpNavy - Body Fat Percentage (Navy Method).
+         * @param {number} idealWeightMidpoint - Midpoint of an ideal weight range.
+         * @param {number} currentWeight - Current weight in kg.
+         * @param {number} tdee - Total Daily Energy Expenditure.
+         * @returns {string} Recommendation text.
+         */
+        function generateRecommendations(bmiClassification, bmi, bfpNavy, idealWeightMidpoint, currentWeight, tdee) {
+            let recommendation = "Based on your current metrics:\n\n";
+
+            // BMI recommendations
+            if (bmiClassification === "Underweight") {
+                recommendation += "- Your BMI is in the Underweight category. Consider consulting a healthcare professional or a nutritionist to discuss healthy weight gain strategies. Focus on nutrient-dense foods.\n";
+            } else if (bmiClassification === "Normal weight") {
+                recommendation += "- Your BMI is in the Normal weight range. Great job maintaining a healthy weight! Continue with a balanced diet and regular physical activity.\n";
+            } else if (bmiClassification === "Overweight") {
+                recommendation += "- Your BMI is in the Overweight category. Small, sustainable changes to your diet and increasing physical activity can help you reach a healthier weight. Aim for a gradual weight loss of 0.5-1 kg per week.\n";
+            } else if (bmiClassification.includes("Obese")) {
+                recommendation += `- Your BMI is in the ${bmiClassification} category. It's highly recommended to consult a healthcare professional for a personalized weight management plan. Focus on a balanced diet, regular exercise, and potentially medical guidance to reduce health risks.\n`;
+            }
+
+            // Body Fat Percentage recommendations (general guidelines)
+            if (!isNaN(bfpNavy) && bfpNavy !== 'N/A') {
+                const bfp = parseFloat(bfpNavy);
+                if (genderInput.value === 'male') {
+                    if (bfp < 6) recommendation += "- Your body fat percentage is very low for a male. While some athletes have low body fat, ensure you are not compromising essential body functions. Consult a professional if concerned.\n";
+                    else if (bfp >= 6 && bfp <= 17) recommendation += "- Your body fat percentage is in a healthy range for a male. Continue with your healthy lifestyle.\n";
+                    else if (bfp > 17 && bfp <= 25) recommendation += "- Your body fat percentage is elevated for a male. Incorporate more strength training and reduce processed foods to improve body composition.\n";
+                    else if (bfp > 25) recommendation += "- Your body fat percentage is high for a male. Focus on a calorie deficit, increased protein intake, and consistent strength training to reduce body fat and build muscle.\n";
+                } else { // female
+                    if (bfp < 14) recommendation += "- Your body fat percentage is very low for a female. While some athletes have low body fat, ensure you are not compromising essential body functions. Consult a professional if concerned.\n";
+                    else if (bfp >= 14 && bfp <= 24) recommendation += "- Your body fat percentage is in a healthy range for a female. Continue with your healthy lifestyle.\n";
+                    else if (bfp > 24 && bfp <= 31) recommendation += "- Your body fat percentage is elevated for a female. Incorporate more strength training and reduce processed foods to improve body composition.\n";
+                    else if (bfp > 31) recommendation += "- Your body fat percentage is high for a female. Focus on a calorie deficit, increased protein intake, and consistent strength training to reduce body fat and build muscle.\n";
+                }
+            }
+
+            // Weight management based on ideal weight and TDEE
+            if (!isNaN(idealWeightMidpoint) && !isNaN(currentWeight)) {
+                const weightDifference = currentWeight - idealWeightMidpoint;
+                if (weightDifference > 2) { // More than 2kg above ideal midpoint
+                    recommendation += `- To reach your ideal weight range, consider a daily calorie intake of approximately ${Math.max(1200, tdee - 500).toFixed(0)} calories to promote healthy weight loss (aim for 0.5-1 kg/week).\n`;
+                } else if (weightDifference < -2) { // More than 2kg below ideal midpoint
+                    recommendation += `- To reach your ideal weight range, consider a daily calorie intake of approximately ${Math.max(tdee + 300, 1800).toFixed(0)} calories to promote healthy weight gain. Focus on nutrient-dense foods.\n`;
+                } else {
+                    recommendation += `- Your current weight is close to your ideal range. To maintain, aim for a daily calorie intake around your TDEE of ${tdee} calories.\n`;
+                }
+            }
+
+            recommendation += "\nAlways consult a healthcare professional or registered dietitian before making significant changes to your diet or exercise routine.";
+            return recommendation;
+        }
+
+        // --- Main Calculation and Display Function ---
+        function performCalculations() {
+            showLoading();
+            const gender = genderInput.value;
+            const age = parseFloat(ageInput.value);
+            let height = parseFloat(heightInput.value); // in cm or inches
+            let weight = parseFloat(weightInput.value); // in kg or lbs
+            let neck = parseFloat(neckInput.value);
+            let waist = parseFloat(waistInput.value);
+            let hip = parseFloat(hipInput.value);
+            const activityLevel = activityLevelInput.value;
+
+            // Convert all inputs to metric for calculations if currently imperial
+            if (!isMetric) {
+                height *= 2.54; // inches to cm
+                weight *= 0.453592; // lbs to kg
+                neck *= 2.54;
+                waist *= 2.54;
+                hip *= 2.54;
+            }
+
+            // BMI Calculation
+            const bmi = calculateBMI(weight, height);
+            const { classification: bmiClass, risk: bmiRisk, color: bmiColor } = getBMIClassification(parseFloat(bmi));
+            bmiResultSpan.textContent = bmi;
+            bmiClassificationSpan.textContent = bmiClass;
+            bmiClassificationSpan.className = `font-bold ${bmiColor}`; // Apply color class
+            bmiRiskSpan.textContent = bmiRisk;
+
+            // Update BMI marker position
+            let markerPosition = 0;
+            if (bmi < 18.5) { markerPosition = (bmi / 18.5) * 18.5; }
+            else if (bmi >= 18.5 && bmi < 25) { markerPosition = 18.5 + ((bmi - 18.5) / 6.5) * 6.5; }
+            else if (bmi >= 25 && bmi < 30) { markerPosition = 25 + ((bmi - 25) / 5) * 5; }
+            else if (bmi >= 30 && bmi < 35) { markerPosition = 30 + ((bmi - 30) / 5) * 5; }
+            else if (bmi >= 35 && bmi < 40) { markerPosition = 35 + ((bmi - 35) / 5) * 5; }
+            else { markerPosition = 40 + ((bmi - 40) / 10) * 10; } // Cap at 50 for visual representation
+
+            // Normalize marker position to percentage of the bar width (0-100%)
+            // The bar segments are: <18.5 (18.5%), 18.5-24.9 (6.5%), 25-29.9 (5%), 30-34.9 (5%), 35-39.9 (5%), 40+ (55%)
+            // Total width for visualization purpose is 100%
+            let normalizedPosition = 0;
+            if (bmi < 18.5) {
+                normalizedPosition = (bmi / 18.5) * 18.5; // Scale to first segment
+            } else if (bmi >= 18.5 && bmi < 25) {
+                normalizedPosition = 18.5 + ((bmi - 18.5) / (25 - 18.5)) * 6.5; // Scale to second segment
+            } else if (bmi >= 25 && bmi < 30) {
+                normalizedPosition = 18.5 + 6.5 + ((bmi - 25) / (30 - 25)) * 5; // Scale to third segment
+            } else if (bmi >= 30 && bmi < 35) {
+                normalizedPosition = 18.5 + 6.5 + 5 + ((bmi - 30) / (35 - 30)) * 5; // Scale to fourth segment
+            } else if (bmi >= 35 && bmi < 40) {
+                normalizedPosition = 18.5 + 6.5 + 5 + 5 + ((bmi - 35) / (40 - 35)) * 5; // Scale to fifth segment
+            } else { // bmi >= 40
+                normalizedPosition = 18.5 + 6.5 + 5 + 5 + 5 + ((bmi - 40) / 10) * 55; // Scale to last segment (up to 50 for visual)
+                normalizedPosition = Math.min(normalizedPosition, 100); // Cap at 100%
+            }
+            bmiMarker.style.left = `${normalizedPosition}%`;
+
+
+            // Body Fat Percentage Calculation
+            let bfpNavy = 'N/A';
+            if (!isNaN(neck) && !isNaN(waist) && (gender === 'male' || !isNaN(hip))) {
+                bfpNavy = calculateBFP_Navy(gender, height, neck, waist, hip);
+            }
+            const bfpBIA = calculateBFP_BIA_Simulation(gender, age, parseFloat(bmi));
+
+            bfpNavyResultSpan.textContent = bfpNavy !== 'N/A' ? `${bfpNavy}%` : 'N/A';
+            bfpBIAResultSpan.textContent = bfpBIA !== 'N/A' ? `${bfpBIA}%` : 'N/A';
+
+            // Ideal Weight Calculation
+            const idealWeights = calculateIdealWeight(gender, height);
+            idealWeightHamwiSpan.textContent = `${isMetric ? idealWeights.hamwi : (idealWeights.hamwi / 0.453592).toFixed(1)} ${isMetric ? 'kg' : 'lbs'}`;
+            idealWeightDevineSpan.textContent = `${isMetric ? idealWeights.devine : (idealWeights.devine / 0.453592).toFixed(1)} ${isMetric ? 'kg' : 'lbs'}`;
+            idealWeightRobinsonSpan.textContent = `${isMetric ? idealWeights.robinson : (idealWeights.robinson / 0.453592).toFixed(1)} ${isMetric ? 'kg' : 'lbs'}`;
+            idealWeightMillerSpan.textContent = `${isMetric ? idealWeights.miller : (idealWeights.miller / 0.453592).toFixed(1)} ${isMetric ? 'kg' : 'lbs'}`;
+
+            // Calorie Needs Calculation
+            const bmrValues = calculateBMR(gender, weight, height, age, parseFloat(bfpNavy));
+            bmrHarrisSpan.textContent = bmrValues.bmrHarris;
+            bmrMifflinSpan.textContent = bmrValues.bmrMifflin;
+            bmrKatchSpan.textContent = bmrValues.bmrKatch;
+
+            // Use Mifflin-St Jeor BMR for TDEE as it's widely accepted
+            const tdee = calculateTDEE(parseFloat(bmrValues.bmrMifflin), activityLevel);
+            tdeeResultSpan.textContent = tdee;
+
+            // Personalized Recommendations
+            const idealWeightMidpoint = (parseFloat(idealWeights.hamwi) + parseFloat(idealWeights.devine) + parseFloat(idealWeights.robinson) + parseFloat(idealWeights.miller)) / 4;
+            const recommendations = generateRecommendations(bmiClass, parseFloat(bmi), parseFloat(bfpNavy), idealWeightMidpoint, weight, parseFloat(tdee));
+            recommendationsSpan.textContent = recommendations;
+
+            // Save to History
+            saveHistory({
+                date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+                gender: gender,
+                age: age,
+                height: isMetric ? height.toFixed(1) : (height / 2.54).toFixed(1),
+                weight: isMetric ? weight.toFixed(1) : (weight / 0.453592).toFixed(1),
+                neck: isMetric ? neck.toFixed(1) : (neck / 2.54).toFixed(1),
+                waist: isMetric ? waist.toFixed(1) : (waist / 2.54).toFixed(1),
+                hip: isMetric ? hip.toFixed(1) : (hip / 2.54).toFixed(1),
+                activityLevel: activityLevel,
+                isMetric: isMetric,
+                bmi: parseFloat(bmi),
+                bmiClassification: bmiClass,
+                bfpNavy: bfpNavy !== 'N/A' ? parseFloat(bfpNavy) : null,
+                bfpBIA: bfpBIA !== 'N/A' ? parseFloat(bfpBIA) : null,
+                idealWeightHamwi: parseFloat(idealWeights.hamwi),
+                idealWeightDevine: parseFloat(idealWeights.devine),
+                idealWeightRobinson: parseFloat(idealWeights.robinson),
+                idealWeightMiller: parseFloat(idealWeights.miller),
+                bmrHarris: parseFloat(bmrValues.bmrHarris),
+                bmrMifflin: parseFloat(bmrValues.bmrMifflin),
+                bmrKatch: bmrValues.bmrKatch !== 'N/A' ? parseFloat(bmrValues.bmrKatch) : null,
+                tdee: parseFloat(tdee)
+            });
+
+            hideLoading();
+            showStep(3); // Go to results step
+        }
+
+        // --- Event Listeners for Navigation ---
+        document.getElementById('next1Btn').addEventListener('click', () => {
+            if (validateStep1()) {
+                showStep(2);
+            }
+        });
+        document.getElementById('prev2Btn').addEventListener('click', () => showStep(1));
+        document.getElementById('calculateBtn').addEventListener('click', () => {
+            if (validateStep2()) {
+                performCalculations();
+            }
+        });
+        document.getElementById('prev3Btn').addEventListener('click', () => showStep(2));
+        document.getElementById('viewHistoryBtn').addEventListener('click', () => showStep(4));
+        document.getElementById('prev4Btn').addEventListener('click', () => showStep(3));
+
+        // --- Firebase Firestore Operations ---
+        const HISTORY_COLLECTION_NAME = 'health_metrics_history';
+
+        /**
+         * Saves a new health metric entry to Firestore.
+         * @param {Object} data - The health metric data to save.
+         */
+        async function saveHistory(data) {
+            if (!userId) {
+                console.error("User not authenticated. Cannot save history.");
+                showMessage("Please wait, still connecting to the database. Try again in a moment.", "warning");
+                return;
+            }
+            showLoading();
+            try {
+                const historyCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/${HISTORY_COLLECTION_NAME}`);
+                await addDoc(historyCollectionRef, data);
+                showMessage("Metrics saved successfully!", "success");
+            } catch (e) {
+                console.error("Error adding document: ", e);
+                showMessage("Error saving metrics. Please try again.", "error");
+            } finally {
+                hideLoading();
+            }
+        }
+
+        /**
+         * Loads and displays health metric history from Firestore.
+         * Sets up a real-time listener using onSnapshot.
+         */
+        function loadHistory() {
+            if (!userId) {
+                console.warn("User not authenticated. Cannot load history yet.");
+                return;
+            }
+            showLoading();
+            try {
+                const historyCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/${HISTORY_COLLECTION_NAME}`);
+                // Order by date descending to show latest first in table
+                const q = query(historyCollectionRef); // Removed orderBy for now due to potential index issues as per instructions
+
+                // Unsubscribe from previous listener if exists
+                if (unsubscribeSnapshot) {
+                    unsubscribeSnapshot();
+                }
+
+                unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+                    const historyData = [];
+                    snapshot.forEach((doc) => {
+                        historyData.push({ id: doc.id, ...doc.data() });
+                    });
+                    // Sort by date manually if orderBy is not used in query
+                    historyData.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    displayHistory(historyData);
+                    drawCharts(historyData);
+                    hideLoading();
+                }, (error) => {
+                    console.error("Error fetching history: ", error);
+                    showMessage("Error loading history. Please try again.", "error");
+                    hideLoading();
+                });
+            } catch (e) {
+                console.error("Error setting up history listener: ", e);
+                showMessage("Error setting up history listener. Please try again.", "error");
+                hideLoading();
+            }
+        }
+
+        /**
+         * Deletes a health metric entry from Firestore.
+         * @param {string} docId - The ID of the document to delete.
+         */
+        async function deleteHistoryEntry(docId) {
+            if (!userId) {
+                showMessage("Authentication error. Cannot delete entry.", "error");
+                return;
+            }
+            // Custom confirmation dialog
+            showConfirmation("Are you sure you want to delete this entry?", async () => {
+                showLoading();
+                try {
+                    const docRef = doc(db, `artifacts/${appId}/users/${userId}/${HISTORY_COLLECTION_NAME}`, docId);
+                    await deleteDoc(docRef);
+                    showMessage("Entry deleted successfully!", "success");
+                } catch (e) {
+                    console.error("Error deleting document: ", e);
+                    showMessage("Error deleting entry. Please try again.", "error");
+                } finally {
+                    hideLoading();
+                }
+            });
+        }
+
+
+        /**
+         * Displays the history data in a table.
+         * @param {Array<Object>} historyData - Array of health metric objects.
+         */
+        function displayHistory(historyData) {
+            historyTableBody.innerHTML = ''; // Clear existing rows
+            if (historyData.length === 0) {
+                noHistoryMessage.classList.remove('hidden');
+                historyTableContainer.classList.add('hidden');
+                return;
+            }
+            noHistoryMessage.classList.add('hidden');
+            historyTableContainer.classList.remove('hidden');
+
+            historyData.forEach(entry => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="py-3 px-4 whitespace-nowrap">${entry.date}</td>
+                    <td class="py-3 px-4 whitespace-nowrap">${entry.weight} ${entry.isMetric ? 'kg' : 'lbs'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap">${entry.bmi.toFixed(2)}</td>
+                    <td class="py-3 px-4 whitespace-nowrap">${entry.bfpNavy !== null ? entry.bfpNavy.toFixed(2) + '%' : 'N/A'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap">${entry.tdee.toFixed(0)}</td>
+                    <td class="py-3 px-4 whitespace-nowrap">
+                        <button class="text-red-600 hover:text-red-800 focus:outline-none delete-btn" data-id="${entry.id}" title="Delete Entry">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                `;
+                historyTableBody.appendChild(row);
+            });
+
+            // Add event listeners for delete buttons
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const docId = event.currentTarget.dataset.id;
+                    deleteHistoryEntry(docId);
+                });
+            });
+        }
+
+        // --- Chart.js Integration ---
+        function drawCharts(historyData) {
+            // Sort data by date ascending for charts
+            const sortedData = [...historyData].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            const dates = sortedData.map(entry => entry.date);
+            const weights = sortedData.map(entry => entry.weight);
+            const bmis = sortedData.map(entry => entry.bmi);
+            const bfpsNavy = sortedData.map(entry => entry.bfpNavy);
+            const tdees = sortedData.map(entry => entry.tdee);
+
+            // Destroy existing charts if they exist
+            if (weightChart) weightChart.destroy();
+            if (bmiChart) bmiChart.destroy();
+            if (bfpChart) bfpChart.destroy();
+            if (tdeeChart) tdeeChart.destroy();
+
+            const commonChartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: false,
+                        grid: {
+                            color: '#e2e8f0'
+                        }
+                    }
+                }
+            };
+
+            // Weight Chart
+            const weightCtx = document.getElementById('weightChart').getContext('2d');
+            weightChart = new Chart(weightCtx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: `Weight (${isMetric ? 'kg' : 'lbs'})`,
+                        data: weights,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    ...commonChartOptions,
+                    plugins: {
+                        ...commonChartOptions.plugins,
+                        title: {
+                            display: true,
+                            text: 'Weight Trend',
+                            font: { size: 16, weight: 'bold' },
+                            color: '#334155'
+                        }
+                    }
+                }
+            });
+
+            // BMI Chart
+            const bmiCtx = document.getElementById('bmiChart').getContext('2d');
+            bmiChart = new Chart(bmiCtx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'BMI',
+                        data: bmis,
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    ...commonChartOptions,
+                    plugins: {
+                        ...commonChartOptions.plugins,
+                        title: {
+                            display: true,
+                            text: 'BMI Trend',
+                            font: { size: 16, weight: 'bold' },
+                            color: '#334155'
+                        }
+                    }
+                }
+            });
+
+            // BFP Chart
+            const bfpCtx = document.getElementById('bfpChart').getContext('2d');
+            bfpChart = new Chart(bfpCtx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Body Fat Percentage (Navy)',
+                        data: bfpsNavy,
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    ...commonChartOptions,
+                    plugins: {
+                        ...commonChartOptions.plugins,
+                        title: {
+                            display: true,
+                            text: 'Body Fat Percentage Trend',
+                            font: { size: 16, weight: 'bold' },
+                            color: '#334155'
+                        }
+                    }
+                }
+            });
+
+            // TDEE Chart
+            const tdeeCtx = document.getElementById('tdeeChart').getContext('2d');
+            tdeeChart = new Chart(tdeeCtx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'TDEE (Calories)',
+                        data: tdees,
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    ...commonChartOptions,
+                    plugins: {
+                        ...commonChartOptions.plugins,
+                        title: {
+                            display: true,
+                            text: 'TDEE Trend',
+                            font: { size: 16, weight: 'bold' },
+                            color: '#334155'
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- PDF Export Function ---
+        document.getElementById('exportPdfBtn').addEventListener('click', () => {
+            showLoading();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const userName = "User"; // Could be dynamically set if user profile exists
+            const currentDate = new Date().toLocaleDateString();
+
+            doc.setFontSize(22);
+            doc.text("Health Metrics Report", 105, 20, null, null, "center");
+            doc.setFontSize(12);
+            doc.text(`Report Date: ${currentDate}`, 105, 28, null, null, "center");
+            doc.text(`Generated for: ${userName}`, 105, 34, null, null, "center");
+
+            let yPos = 45;
+
+            // Current Metrics
+            doc.setFontSize(16);
+            doc.text("Current Health Metrics", 14, yPos);
+            yPos += 10;
+            doc.setFontSize(12);
+
+            const currentMetrics = [
+                ["Gender:", genderInput.value.charAt(0).toUpperCase() + genderInput.value.slice(1)],
+                ["Age:", ageInput.value + " years"],
+                ["Height:", heightInput.value + " " + heightUnitSpan.textContent],
+                ["Weight:", weightInput.value + " " + weightUnitSpan.textContent],
+                ["Activity Level:", activityLevelInput.options[activityLevelInput.selectedIndex].text],
+                ["BMI:", bmiResultSpan.textContent + " (" + bmiClassificationSpan.textContent + ")"],
+                ["BMI Health Risk:", bmiRiskSpan.textContent],
+                ["Body Fat (Navy):", bfpNavyResultSpan.textContent],
+                ["Body Fat (BIA Sim):", bfpBIAResultSpan.textContent],
+                ["Ideal Weight (Hamwi):", idealWeightHamwiSpan.textContent],
+                ["Ideal Weight (Devine):", idealWeightDevineSpan.textContent],
+                ["Ideal Weight (Robinson):", idealWeightRobinsonSpan.textContent],
+                ["Ideal Weight (Miller):", idealWeightMillerSpan.textContent],
+                ["BMR (Harris-Benedict):", bmrHarrisSpan.textContent + " calories/day"],
+                ["BMR (Mifflin-St Jeor):", bmrMifflinSpan.textContent + " calories/day"],
+                ["BMR (Katch-McArdle):", bmrKatchSpan.textContent + " calories/day"],
+                ["TDEE:", tdeeResultSpan.textContent + " calories/day"]
+            ];
+
+            doc.autoTable({
+                startY: yPos,
+                head: [['Metric', 'Value']],
+                body: currentMetrics,
+                theme: 'grid',
+                styles: { fontSize: 10, cellPadding: 2, overflow: 'linebreak' },
+                headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
+                columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 }, 1: { cellWidth: 'auto' } },
+                margin: { left: 14, right: 14 }
+            });
+
+            yPos = doc.autoTable.previous.finalY + 15;
+
+            // Recommendations
+            doc.setFontSize(16);
+            doc.text("Personalized Recommendations", 14, yPos);
+            yPos += 8;
+            doc.setFontSize(10);
+            const recommendationsText = recommendationsSpan.textContent;
+            const splitRecommendations = doc.splitTextToSize(recommendationsText, 180);
+            doc.text(splitRecommendations, 14, yPos);
+
+            yPos += splitRecommendations.length * 5 + 15; // Estimate space for text
+
+            // History Table
+            doc.addPage();
+            yPos = 20;
+            doc.setFontSize(16);
+            doc.text("Measurement History", 14, yPos);
+            yPos += 10;
+            doc.setFontSize(10);
+
+            const historyRows = [];
+            document.querySelectorAll('#historyTableBody tr').forEach(row => {
+                const cols = row.querySelectorAll('td');
+                if (cols.length > 0) {
+                    historyRows.push([
+                        cols[0].innerText, // Date
+                        cols[1].innerText, // Weight
+                        cols[2].innerText, // BMI
+                        cols[3].innerText, // BFP (Navy)
+                        cols[4].innerText  // TDEE
+                    ]);
+                }
+            });
+
+            if (historyRows.length > 0) {
+                doc.autoTable({
+                    startY: yPos,
+                    head: [['Date', 'Weight', 'BMI', 'BFP (Navy)', 'TDEE']],
+                    body: historyRows,
+                    theme: 'grid',
+                    styles: { fontSize: 9, cellPadding: 2, overflow: 'linebreak' },
+                    headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
+                    margin: { left: 14, right: 14 }
+                });
+            } else {
+                doc.text("No measurement history available.", 14, yPos);
+            }
+
+            doc.save('Health_Metrics_Report.pdf');
+            hideLoading();
+            showMessage("PDF report generated successfully!", "success");
+        });
+
+        // --- Utility Functions (Loading, Message Box) ---
+        function showLoading() {
+            loadingOverlay.style.display = 'flex';
+        }
+
+        function hideLoading() {
+            loadingOverlay.style.display = 'none';
+        }
+
+        // Custom Message Box (instead of alert)
+        function showMessage(message, type = 'info') {
+            const messageBox = document.createElement('div');
+            messageBox.className = `fixed bottom-4 right-4 p-4 rounded-lg shadow-lg text-white z-50 transition-transform duration-300 transform translate-y-0`;
+
+            if (type === 'success') {
+                messageBox.classList.add('bg-green-500');
+            } else if (type === 'error') {
+                messageBox.classList.add('bg-red-500');
+            } else if (type === 'warning') {
+                messageBox.classList.add('bg-yellow-500');
+            } else {
+                messageBox.classList.add('bg-blue-500');
+            }
+
+            messageBox.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-times-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'} mr-2"></i>
+                    <span>${message}</span>
+                    <button class="ml-auto text-white opacity-75 hover:opacity-100 focus:outline-none" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(messageBox);
+
+            setTimeout(() => {
+                messageBox.style.transform = 'translateY(100%)';
+                messageBox.addEventListener('transitionend', () => messageBox.remove());
+            }, 5000); // Message disappears after 5 seconds
+        }
+
+        // Custom Confirmation Dialog (instead of confirm)
+        function showConfirmation(message, onConfirm) {
+            const dialogOverlay = document.createElement('div');
+            dialogOverlay.className = `fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50`;
+            dialogOverlay.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
+                    <p class="text-lg font-semibold text-gray-800 mb-4">${message}</p>
+                    <div class="flex justify-center gap-4">
+                        <button id="confirmYesBtn" class="btn-primary">Yes</button>
+                        <button id="confirmNoBtn" class="btn-secondary">No</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(dialogOverlay);
+
+            document.getElementById('confirmYesBtn').addEventListener('click', () => {
+                onConfirm();
+                dialogOverlay.remove();
+            });
+
+            document.getElementById('confirmNoBtn').addEventListener('click', () => {
+                dialogOverlay.remove();
+            });
+        }
+
+    </script>
+</body>
+</html>
