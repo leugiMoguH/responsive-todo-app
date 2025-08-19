@@ -1,0 +1,306 @@
+<script>console.log('JS carregado');</script>
+
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>O Teu Prompt, Elevado.</title>
+	<!-- Tailwind CSS CDN -->
+	<script src="https://cdn.tailwindcss.com"></script>
+	<!-- Fonte Inter -->
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+	<style>
+		body { font-family: 'Inter', sans-serif; }
+		/* Remove setas dos dropdowns no Chrome */
+		select::-ms-expand { display: none; }
+		select { appearance: none; -webkit-appearance: none; -moz-appearance: none; }
+	</style>
+</head>
+<body class="bg-gray-900 min-h-screen flex flex-col">
+	<!-- Landing Page -->
+	<section id="landing" class="flex flex-1 flex-col items-center justify-center px-4 py-12">
+		<div class="max-w-xl w-full text-center">
+			<h1 class="text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow">O Teu Prompt, Elevado.</h1>
+			<h2 class="text-lg md:text-xl text-gray-300 mb-6">Transforma ideias simples em prompts de excelência. A tua IA vai agradecer-te.</h2>
+			<p class="text-gray-400 mb-8">A engenharia de prompts é o elo perdido entre a tua intenção e resultados de IA verdadeiramente úteis. Esta aplicação traduz as tuas ideias em instruções otimizadas, detalhadas e adaptadas ao modelo de IA escolhido, promovendo qualidade, eficiência e controlo de custos.</p>
+			<button id="startBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl shadow-lg transition text-lg">Começar Agora</button>
+		</div>
+	</section>
+
+	<!-- Aplicação Principal (inicialmente escondida) -->
+	<section id="app" class="hidden flex-1 flex-col items-center justify-center px-4 py-12" autocomplete="off">
+			<div class="max-w-2xl w-full mx-auto bg-white/90 rounded-2xl shadow-2xl p-8 flex flex-col gap-8">
+
+			<!-- Tipo de Prompt -->
+			<div>
+				<label for="promptType" class="block text-gray-700 font-semibold mb-2">Tipo de Prompt:</label>
+				<div class="relative">
+					<select id="promptType" class="w-full p-3 rounded-xl border border-gray-300 bg-gray-100 text-gray-900 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none pr-8">
+						<option value="text">Texto</option>
+						<option value="image">Imagem</option>
+						<option value="video">Vídeo</option>
+						<option value="audio">Áudio</option>
+						<option value="code">Código</option>
+					</select>
+					<span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">▼</span>
+				</div>
+			</div>
+
+			<h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Tradutor de Intenção para Prompts de Excelência</h2>
+			<!-- Input do utilizador -->
+			<div>
+				<label for="userInput" class="block text-gray-700 font-semibold mb-2">Descreve o teu objetivo em linguagem natural:</label>
+				<textarea id="userInput" rows="4" class="w-full p-4 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm resize-none text-gray-900 bg-gray-100" placeholder="Ex: Quero um resumo detalhado de um artigo científico para estudantes do secundário..."></textarea>
+			</div>
+			<!-- Seletores -->
+			<div class="flex flex-col md:flex-row gap-4">
+				<div class="flex-1">
+					<label for="iaSelect" class="block text-gray-700 font-semibold mb-2">Modelo de IA:</label>
+					<div class="relative">
+						<select id="iaSelect" class="w-full p-3 rounded-xl border border-gray-300 bg-gray-100 text-gray-900 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none pr-8">
+							<option value="Gemini">Gemini</option>
+							<option value="ChatGPT">ChatGPT 4.0</option>
+							<option value="Claude">Claude Opus</option>
+							<option value="Llama">Llama 3</option>
+							<option value="Cohere">Cohere Command R</option>
+							<option value="Sora">Sora (Vídeo)</option>
+							<option value="DALL-E">DALL-E</option>
+							<option value="Midjourney">Midjourney</option>
+							<option value="StableDiffusion">Stable Diffusion</option>
+							<option value="Firefly">Adobe Firefly</option>
+							<option value="Imagen">Imagen</option>
+							<option value="Bard">Bard</option>
+							<option value="Perplexity">Perplexity</option>
+							<option value="Mistral">Mistral</option>
+							<option value="DeepFloyd">DeepFloyd</option>
+						</select>
+						<span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">▼</span>
+					</div>
+				</div>
+				<div class="flex-1">
+					<label for="langSelect" class="block text-gray-700 font-semibold mb-2">Idioma do Prompt:</label>
+					<div class="relative">
+						<select id="langSelect" class="w-full p-3 rounded-xl border border-gray-300 bg-gray-100 text-gray-900 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none pr-8">
+							<option value="en">Inglês</option>
+							<option value="zh">Chinês (Mandarim)</option>
+							<option value="hi">Hindi</option>
+							<option value="es">Espanhol</option>
+							<option value="fr">Francês</option>
+							<option value="ar">Árabe</option>
+							<option value="bn">Bengali</option>
+							<option value="ru">Russo</option>
+							<option value="pt">Português</option>
+							<option value="ur">Urdu</option>
+							<option value="id">Indonésio</option>
+							<option value="de">Alemão</option>
+							<option value="ja">Japonês</option>
+							<option value="sw">Suaíli</option>
+							<option value="mr">Marata</option>
+							<option value="te">Télugo</option>
+							<option value="tr">Turco</option>
+							<option value="ta">Tâmil</option>
+							<option value="vi">Vietnamita</option>
+							<option value="it">Italiano</option>
+						</select>
+						<span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">▼</span>
+					</div>
+				</div>
+			</div>
+			<!-- Botão de geração -->
+			<div class="flex justify-center">
+				<button id="generateBtn" type="button" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-8 rounded-xl shadow-lg transition text-lg">Gerar Prompt de Excelência</button>
+			</div>
+			<!-- Output -->
+			<div>
+				<label for="outputPrompt" class="block text-gray-700 font-semibold mb-2">Prompt Otimizado:</label>
+				<div class="flex gap-2">
+					<textarea id="outputPrompt" rows="5" class="w-full p-4 rounded-xl border border-gray-300 bg-gray-100 text-gray-900 shadow-sm resize-none" readonly placeholder="O prompt otimizado aparecerá aqui..."></textarea>
+					<button id="copyBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-xl shadow transition h-fit mt-2 md:mt-0" title="Copiar para a Área de Transferência">📋</button>
+				</div>
+			</div>
+			<p class="text-xs text-gray-400 text-center mt-2">* O prompt pode ser traduzido para o idioma selecionado. Tradução real seria feita por IA numa versão futura.</p>
+		</div>
+	</section>
+
+	<!-- JavaScript da aplicação -->
+	<script>
+
+			// --- Motor de Regras local (fallback caso Gemini falhe) ---
+			const iaGuidelines = {
+				Gemini: {
+					persona: "Sê conciso e detalhado, foca no raciocínio.",
+					formato: "A resposta deve estar em bullet points e tabelas.",
+					extras: "Evita redundâncias e utiliza exemplos sempre que possível."
+				},
+				ChatGPT: {
+					persona: "Atua como um assistente profissional e criativo.",
+					formato: "Utiliza um tom amigável e formal.",
+					extras: "Inclui sugestões práticas e perguntas de follow-up."
+				},
+				Claude: {
+					persona: "Responde de forma segura, útil e inofensiva.",
+					formato: "Apresenta a informação de forma estruturada e em prosa.",
+					extras: "Garante clareza e evita ambiguidades."
+				},
+				Llama: {
+					persona: "Fornece respostas rápidas, claras e baseadas em factos.",
+					formato: "Utiliza listas e exemplos práticos sempre que possível.",
+					extras: "Evita linguagem excessivamente técnica."
+				},
+				Cohere: {
+					persona: "Foca na utilidade e criatividade, mantendo um tom profissional.",
+					formato: "Estrutura a resposta em parágrafos curtos e claros.",
+					extras: "Inclui dicas e sugestões adicionais."
+				},
+				Sora: {
+					persona: "Gera vídeos realistas e criativos a partir de descrições detalhadas.",
+					formato: "Aceita prompts descritivos e objetivos claros.",
+					extras: "Inclui detalhes visuais, estilos e duração desejada."
+				},
+				DALLE: {
+					persona: "Cria imagens originais a partir de texto.",
+					formato: "Descreve claramente o conteúdo, estilo e cores.",
+					extras: "Evita ambiguidades e pede variações se necessário."
+				},
+				Midjourney: {
+					persona: "Especialista em arte digital e estilos visuais.",
+					formato: "Foca em detalhes artísticos, iluminação e composição.",
+					extras: "Usa referências de artistas e estilos."
+				},
+				StableDiffusion: {
+					persona: "Gera imagens de alta qualidade a partir de prompts detalhados.",
+					formato: "Inclui contexto, estilo e resolução desejada.",
+					extras: "Pode pedir múltiplas variações."
+				},
+				Firefly: {
+					persona: "Cria imagens e gráficos para design e publicidade.",
+					formato: "Descreve o objetivo, público e estilo visual.",
+					extras: "Inclui requisitos de branding."
+				},
+				Imagen: {
+					persona: "Gera imagens fotorrealistas a partir de texto.",
+					formato: "Detalha o cenário, personagens e atmosfera.",
+					extras: "Foca em realismo e nitidez."
+				},
+				Bard: {
+					persona: "Assistente versátil para texto, código e criatividade.",
+					formato: "Adapta o tom ao contexto pedido.",
+					extras: "Sugere melhorias e alternativas."
+				},
+				Perplexity: {
+					persona: "Responde a perguntas complexas com fontes e explicações.",
+					formato: "Estrutura em tópicos e cita fontes.",
+					extras: "Inclui links e referências."
+				},
+				Mistral: {
+					persona: "Gera texto técnico e científico de alta qualidade.",
+					formato: "Utiliza linguagem formal e precisa.",
+					extras: "Inclui exemplos e explicações detalhadas."
+				},
+				DeepFloyd: {
+					persona: "Cria imagens artísticas e experimentais.",
+					formato: "Explora estilos inovadores e composições.",
+					extras: "Aceita prompts criativos e abertos."
+				}
+			};
+
+			// --- Função principal de geração de prompt usando Gemini API ---
+			async function generatePrompt() {
+				const userInput = document.getElementById('userInput').value.trim();
+				// const advancedInstructions = document.getElementById('advancedInstructions').value.trim();
+				const ia = document.getElementById('iaSelect').value;
+				const lang = document.getElementById('langSelect').value;
+				const outputArea = document.getElementById('outputPrompt');
+				const promptType = document.getElementById('promptType').value;
+				if (!userInput) {
+					outputArea.value = 'Por favor, descreve o teu objetivo.';
+					return;
+				}
+
+				outputArea.value = 'A gerar prompt...';
+
+				// Montar instruções para Gemini (ou outra IA)
+				const rules = iaGuidelines[ia];
+
+				// Bloco universal de guidelines de excelência para qualquer tipo de output
+				const excellenceGuidelines = `General Excellence Guidelines (apply to any type of prompt: text, image, code, agent, task, etc.):\n• Carefully interpret the user's intent and context, even if not fully explicit.\n• If information is missing, make reasonable and transparent assumptions, and state them clearly in the output.\n• Ensure the output is actionable, unambiguous, and ready to use by the intended system or user.\n• Use clear structure: headings, lists, tables, code blocks, or diagrams as appropriate.\n• Highlight potential risks, limitations, and ethical considerations for the chosen modality.\n• Provide practical examples, test cases, or usage instructions when relevant.\n• Never invent facts or code—validate all information and cite sources or standards if possible.\n• Suggest improvements, alternatives, or follow-up questions for further refinement.\n• Always respect privacy, copyright, and safety best practices.`;
+
+				// Instruções avançadas padrão para máxima qualidade e estrutura
+				const defaultAdvanced = `\n\nYou are a world-class AI research assistant. Always:\n• Simulate researching multiple top-tier, up-to-date sources (scientific journals, government sites, reputable media, expert blogs).\n• Write a clear, concise, and accurate summary, using plain language and avoiding jargon.\n• Structure your answer with headings, bullet points, and tables if appropriate.\n• Always cite your sources using [Author, Source, Year] or direct URLs. If no credible source is available, state “Source unavailable.”\n• If you are unsure or data is lacking, clearly say so. Never guess or hallucinate.\n• Highlight any limitations, uncertainties, or open questions.\n• Provide actionable insights, practical examples, and follow-up questions when relevant.\n• Remain neutral, objective, and avoid personal opinions.\n• Use the following output format:\nSummary:\nA well-structured, direct explanation.\nKey Points:\n• Bullet list of main findings.\nCitations:\n• [Source Name, Year]\n• [Direct link if appropriate]\nLimitations:\n• List any gaps, uncertainties, or areas needing more research.\nFollow-up:\n• Suggest next steps or questions for deeper exploration.`;
+
+				let systemPrompt =
+					excellenceGuidelines +
+					`\n\nTransforma a seguinte descrição de objetivo num prompt otimizado para IA (${promptType}), seguindo estas diretrizes:` +
+					`\n- Persona: ${rules.persona}` +
+					`\n- Formato: ${rules.formato}` +
+					`\n- Outras instruções: ${rules.extras}` +
+					`\n- O output deve ser claro, detalhado e pronto a ser usado por um modelo de IA.` +
+					defaultAdvanced;
+
+				// Adicionar instruções avançadas do utilizador, se existirem
+				// if (advancedInstructions) {
+				//     systemPrompt += `\n\nInstruções Avançadas do utilizador:\n${advancedInstructions}`;
+				// }
+
+				// Mapeamento de código de idioma para nome (para tradução)
+				const langMap = {
+					en: 'Inglês', zh: 'Chinês (Mandarim)', hi: 'Hindi', es: 'Espanhol', fr: 'Francês', ar: 'Árabe', bn: 'Bengali', ru: 'Russo', pt: 'Português', ur: 'Urdu', id: 'Indonésio', de: 'Alemão', ja: 'Japonês', sw: 'Suaíli', mr: 'Marata', te: 'Télugo', tr: 'Turco', ta: 'Tâmil', vi: 'Vietnamita', it: 'Italiano'
+				};
+
+				try {
+					// Chamada ao backend seguro
+					const response = await fetch('http://localhost:3001/api/generate-prompt', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							userInput,
+							ia,
+							lang,
+							promptType,
+							systemPrompt,
+							langName: langMap[lang] || lang
+						})
+					});
+					if (!response.ok) throw new Error('Erro ao contactar o backend.');
+					const data = await response.json();
+					outputArea.value = data.prompt || '[Erro: resposta inválida do backend]';
+				} catch (e) {
+					// Fallback local
+					outputArea.value = '[Erro ao contactar backend: ' + (e.message || e) + ']\n\n[Prompt local]\n' +
+						`# Objetivo\n${userInput}\n\n# Persona\n${rules.persona}\n\n# Formato\n${rules.formato}\n\n# Outras Instruções\n${rules.extras}`;
+				}
+			}
+
+		// --- Função para copiar para a área de transferência ---
+		function copyToClipboard() {
+			const outputArea = document.getElementById('outputPrompt');
+			outputArea.select();
+			outputArea.setSelectionRange(0, 99999); // Para mobile
+			document.execCommand('copy');
+			// Feedback visual
+			const btn = document.getElementById('copyBtn');
+			btn.textContent = '✅';
+			setTimeout(() => { btn.textContent = '📋'; }, 1200);
+		}
+
+		// --- Navegação entre landing e app ---
+		document.getElementById('startBtn').onclick = function() {
+			document.getElementById('landing').classList.add('hidden');
+			document.getElementById('app').classList.remove('hidden');
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+		};
+
+		// --- Eventos principais ---
+		document.getElementById('generateBtn').onclick = generatePrompt;
+		document.getElementById('copyBtn').onclick = copyToClipboard;
+
+		// --- UX extra: Enter gera prompt se textarea focada ---
+		document.getElementById('userInput').addEventListener('keydown', function(e) {
+			if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+				generatePrompt();
+			}
+		});
+	</script>
+</body>
+</html>
